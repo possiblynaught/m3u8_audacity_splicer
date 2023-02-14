@@ -190,15 +190,20 @@ def main():
             # Set song length and zoom in on end
             audacity.write("Select: Start=0 End=" + song.get_runtime())
             audacity.write("ZoomSel:")
+            # Zoom in on end of selection
             for z in range(7):
                 audacity.write("ZoomIn:")
             audacity.write("SkipSelEnd:")
-            # Focus on end and zoom 7 times in
-            choice = input(newline + \
-            "Select the end of the song with the cursor, press Enter when done or 'q' to quit: ")
+            # Get expected song length in min and seconds
+            len_min = int(song.get_runtime() / 60)
+            len_sec = int(song.get_runtime() % 60)
+            # Prompt user to verify end point
+            choice = input(newline + "Edit the end of the song (~" + len_min + ":" + \
+                len_sec + ") with the cursor, press Enter when done or 'q' to quit: ")
+            # Quit if 'q' passed
             if choice == 'q':
                 break
-            # TODO: Ask for retry if helpful or option to exit
+            # TODO: Ask for retry option?
             audacity.write("SelPrevClipBoundaryToCursor:")
             audacity.write("Split:")
             # Create an output filename and export the track

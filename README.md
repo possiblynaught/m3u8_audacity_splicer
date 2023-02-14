@@ -1,6 +1,6 @@
 # M3U8 Audacity Splicer
 
-Python automation for [Audacity](https://www.audacityteam.org/) or Audacity fork (like [tenacity](https://tenacityaudio.org/))
+Python automation for [Audacity](https://www.audacityteam.org/) or an Audacity fork (like [tenacity](https://tenacityaudio.org/))
 
 This playlist audio splicer script takes a M3U8 playlist and a recording of the whole playlist and automatically splices the recording into seperate tracks using Audacity. It will then store the exported file locations of the spliced tracks to a new M3U8 playlist. All exported tracks are stored as 16-bit WAV audio files.
 
