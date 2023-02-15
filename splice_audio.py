@@ -217,7 +217,7 @@ def main():
             wavname = slugify(song.get_track()).replace("\n", "/n").replace("\r", "/r")
             wavname = wavname + ".wav"
             # Guard against newline \n in filenames on Windows
-            if wavname[0] = 'n':
+            if wavname[0] == 'n':
                 wavname = "_" + wavname
             # Replace spaces with underscores
             song.set_file(os.path.join(output_directory, wavname).replace(" ", "_"))
