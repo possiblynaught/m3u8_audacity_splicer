@@ -195,8 +195,12 @@ def main():
                 audacity.write("ZoomIn:")
             audacity.write("SkipSelEnd:")
             # Get expected song length in min and seconds
-            len_min = int(song.get_runtime() / 60)
-            len_sec = int(song.get_runtime() % 60)
+            len_min = str(int(int(song.get_runtime()) / 60))
+            len_sec = int(int(song.get_runtime()) % 60)
+            if len_sec < 10:
+                len_sec = "0" + str(len_sec)
+            else:
+                len_sec = str(len_sec)
             # Prompt user to verify end point
             choice = input(newline + "Edit the end of the song (~" + len_min + ":" + \
                 len_sec + ") with the cursor, press Enter when done or 'q' to quit: ")
@@ -217,6 +221,7 @@ def main():
             # Export file and trim remaining
             audacity.write("Export2: Filename=" + song.get_file())
             audacity.write("Delete:")
+            audacity.write("Align_StartToZero:")
             # Export song metadata to playlist file
             output_playlist.write(track_header + song.get_runtime() + "," + \
                 song.get_artist() + " - " + song.get_track() + "\n" + song.get_file() + "\n")
