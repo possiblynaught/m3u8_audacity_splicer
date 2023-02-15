@@ -10,7 +10,7 @@ exported tracks are stored as 16-bit WAV audio files.
 1) To prepare for use, download pipeclient module from audacity source code:
 https://raw.githubusercontent.com/audacity/audacity/master/scripts/piped-work/pipeclient.py
 
-2) Install slugify to create safe filenames from the track names
+2) Install slugify to create safe filenames from the track names:
 pip install python-slugify
 
 3) Place the pipeclient module (pipeclient.py) and splice audio script (splice_audio.py) into
@@ -206,8 +206,8 @@ def main():
             else:
                 len_sec = str(len_sec)
             # Prompt user to verify end point
-            choice = input(newline + "Click the end of the song (" + len_min + ":" + \
-                len_sec + "), press Enter when done or 'q' to quit: ")
+            choice = input(newline + str(song.get_number()) + " - Click the end of the song (" + \
+                len_min + ":" + len_sec + "), press Enter when done or 'q' to quit: ")
             # Quit if 'q' passed
             if choice == 'q':
                 break
