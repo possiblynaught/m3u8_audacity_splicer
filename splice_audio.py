@@ -206,8 +206,8 @@ def main():
             else:
                 len_sec = str(len_sec)
             # Prompt user to verify end point
-            choice = input(newline + "Edit the end of the song (~" + len_min + ":" + \
-                len_sec + ") with the cursor, press Enter when done or 'q' to quit: ")
+            choice = input(newline + "Click the end of the song (" + len_min + ":" + \
+                len_sec + "), press Enter when done or 'q' to quit: ")
             # Quit if 'q' passed
             if choice == 'q':
                 break
@@ -223,6 +223,8 @@ def main():
             song.set_file(os.path.join(output_directory, wavname).replace(" ", "_"))
             # Export file and trim remaining
             audacity.write("Export2: Filename=" + song.get_file())
+            # Delay for export
+            time.sleep(1)
             audacity.write("Delete:")
             audacity.write("Align_StartToZero:")
             # Check for output file
@@ -246,7 +248,7 @@ def main():
                 error_playlist.write(track_header + song.get_runtime() + "," + \
                     song.get_artist() + " - " + song.get_track() + "\n" + song.get_file() + "\n")
                 # Also print error msg
-                print("Error exporting track " + song.get_number() + ": " + song.get_track())
+                print("Error exporting track " + str(song.get_number()) + ": " + song.get_track())
             # Notify of error present
             print(newline + "All failed track exports have been saved to playlist file: " \
                 + output_playlist_file)
