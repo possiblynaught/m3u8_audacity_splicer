@@ -9,17 +9,20 @@ This playlist audio splicer script takes a M3U8 playlist and a recording of the 
 1) To prepare for use, download pipeclient module from audacity source code:
 https://raw.githubusercontent.com/audacity/audacity/master/scripts/piped-work/pipeclient.py
 
-2) Place the pipeclient module (pipeclient.py) and splice audio script (splice_audio.py) into the Audacity modules folder, you should make the directory if it doesn't exist yet:
+2) Install slugify to create safe filenames from the track names
+pip install python-slugify
+
+3) Place the pipeclient module (pipeclient.py) and splice audio script (splice_audio.py) into the Audacity modules folder, you should make the directory if it doesn't exist yet:
 - Linux: ~/.audacity-files/modules/
 - Windows: the "modules" folder should be in the same location as audacity.exe
 - Mac: the "modules" folder should be in the "Contents" folder.
 
-3) Next, enable mod-script-pipe by going to the menu in Audactity:  
+4) Next, enable mod-script-pipe by going to the menu in Audactity:  
 Edit -> Preferences -> Modules -> Select 'Ask' in drop down menu for mod-script-pipe
 
-4) Now, reboot Audacity and select 'Yes' to start the mod-script-pipe. If you had any issues, you can find more info here: https://manual.audacityteam.org/man/scripting.html
+5) Now, reboot Audacity and select 'Yes' to start the mod-script-pipe. If you had any issues, you can find more info here: https://manual.audacityteam.org/man/scripting.html
 
-5) Then, run the script from within the audacity modules folder with:
+6) Then, run the script from within the audacity modules folder with:
 
 ```bash
 python3 splice_audio.py
