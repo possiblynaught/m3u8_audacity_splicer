@@ -10,8 +10,9 @@ exported tracks are stored as 16-bit WAV audio files.
 1) To prepare for use, download pipeclient module from audacity source code:
 https://raw.githubusercontent.com/audacity/audacity/master/scripts/piped-work/pipeclient.py
 
-2) Install slugify to create safe filenames from the track names:
+2) Install slugify to create safe filenames from the track names and pytaglib to set metadata:
 pip install python-slugify
+pip install pytaglib
 
 3) Place the pipeclient module (pipeclient.py) and splice audio script (splice_audio.py) into
 the Audacity modules folder, you should make the directory if it doesn't exist yet:
@@ -46,8 +47,9 @@ from datetime import datetime
 # Import tkinter for file selection
 import tkinter
 from tkinter import filedialog
-# Import slugify for filename linting
-# (requires you to have run: pip install python-slugify)
+# Import taglib for metadata access (with: pip install pytaglib)
+import taglib
+# Import slugify for filename linting (with: pip install python-slugify)
 from slugify import slugify
 # Import Audacity pipe client
 import pipeclient
@@ -68,23 +70,23 @@ class Song:
 
     def set_track(self, track):
         """Set track name"""
-        self.track = track
+        self.track = str(track)
 
     def set_artist(self, artist):
         """Set artist name"""
-        self.artist = artist
+        self.artist = str(artist)
 
     def set_runtime(self, seconds):
         """Set song length (seconds)"""
-        self.runtime = seconds
+        self.runtime = int(seconds)
 
     def set_file(self, fil):
         """Set file path"""
-        self.file = fil
+        self.file = str(fil)
 
     def set_number(self, number):
         """Set track number"""
-        self.number = number
+        self.number = int(number)
 
     def get_track(self):
         """Get track name"""
@@ -183,24 +185,26 @@ def main():
                 num += 1
             line = input_playlist.readline()
 
+    # Prep error list
+    error_list = []
     # Export songs + playlist data to output dir
-    error_songs = []
-    output_playlist_file = os.path.join(output_directory, "playlist.m3u8")
+    output_playlist_file = os.path.join(output_directory, "__playlist.m3u8")
     with open(output_playlist_file, 'w', encoding='utf-8') as output_playlist:
         # Create header
         output_playlist.write(expected_header + "\n")
         # Read songs and edit Audacity waveforms
         for song in songs:
             # Set song length and zoom in on end
-            audacity.write("Select: Start=0 End=" + song.get_runtime())
+            audacity.write("Select: Start=0 End=" + str(song.get_runtime()))
             audacity.write("ZoomSel:")
-            # Zoom in on end of selection
+            # Zoom in
             for z in range(7):
                 audacity.write("ZoomIn:")
+            # Focus on end of selection
             audacity.write("SkipSelEnd:")
             # Get expected song length in min and seconds
-            len_min = str(int(int(song.get_runtime()) / 60))
-            len_sec = int(int(song.get_runtime()) % 60)
+            len_min = str(int(song.get_runtime() / 60))
+            len_sec = int(song.get_runtime() % 60)
             if len_sec < 10:
                 len_sec = "0" + str(len_sec)
             else:
@@ -214,50 +218,62 @@ def main():
             audacity.write("SelPrevClipBoundaryToCursor:")
             audacity.write("Split:")
             # Create an output filename and export the track, strip illegal chars
-            wavname = slugify(song.get_track()).replace("\n", "/n").replace("\r", "/r")
+            wavname = slugify(song.get_track())
             wavname = wavname + ".wav"
             # Guard against newline \n in filenames on Windows
-            if wavname[0] == 'n':
+            if wavname[0] == "n":
                 wavname = "_" + wavname
             # Replace spaces with underscores
             song.set_file(os.path.join(output_directory, wavname).replace(" ", "_"))
             # Export file and trim remaining
             audacity.write("Export2: Filename=" + song.get_file())
-            # Delay for export
-            time.sleep(1)
             audacity.write("Delete:")
             audacity.write("Align_StartToZero:")
-            # Check for output file
-            if os.path.exists(song.get_file()):
-                # Export song metadata to playlist file
-                output_playlist.write(track_header + song.get_runtime() + "," + \
-                    song.get_artist() + " - " + song.get_track() + "\n" + song.get_file() + "\n")
-            else:
-                # If missing file, add to error list
-                error_songs.append(song)
 
-    # Check for errors
-    if len(error_songs) > 0:
-        # Warn of errors and create error playlist of tracks that failed export
-        error_playlist_file = os.path.join(output_directory, "failed_export_songs.m3u8")
+        # Set .wav file metadata or add to error handler
+        print(newline + "Writing .wav files with metadata")
+        for song in songs:
+            # Check for output file
+            if song.get_file() is None:
+                error_list.append(song)
+            elif os.path.exists(song.get_file()):
+                # Export song metadata to playlist file
+                output_playlist.write(track_header + str(song.get_runtime()) + "," + \
+                    song.get_artist() + " - " + song.get_track() + "\n" + song.get_file() + "\n")
+                # Set .wav file metadata
+                wav = taglib.File(song.get_file())
+                wav.tags["ARTIST"] = [song.get_artist()]
+                wav.tags["TITLE"] = [song.get_track()]
+                wav.tags["TRACKNUMBER"] = [str(song.get_number())]
+                wav.save()
+            else:
+                error_list.append(song)
+
+    # Prep error playlist
+    error_playlist_file = os.path.join(output_directory, "__error_on_export_songs.m3u8")
+    if error_list:
         with open(error_playlist_file, 'w', encoding='utf-8') as error_playlist:
             # Create header
             error_playlist.write(expected_header + "\n")
-            for song in error_songs:
-                # Export song metadata to playlist file
-                error_playlist.write(track_header + song.get_runtime() + "," + \
-                    song.get_artist() + " - " + song.get_track() + "\n" + song.get_file() + "\n")
-                # Also print error msg
-                print("Error exporting track " + str(song.get_number()) + ": " + song.get_track())
-            # Notify of error present
+            print(newline)
+            for song in error_list:
+                # If missing file, warn of error and add to error file
+                print("Error exporting track " + str(song.get_number()) + \
+                    ": " + song.get_track())
+                if song.get_file() is None:
+                    error_playlist.write(track_header + str(song.get_runtime()) + "," + \
+                        song.get_artist() + " - " + song.get_track() + "\n" + \
+                        "NO FILENAME CREATED" + "\n")
+                else:
+                    error_playlist.write(track_header + str(song.get_runtime()) + "," + \
+                        song.get_artist() + " - " + song.get_track() + "\n" + \
+                        song.get_file() + "\n")
+            # Notify of error
             print(newline + "All failed track exports have been saved to playlist file: " \
-                + output_playlist_file)
-
+                + "\n" + error_playlist_file)
+            
     # Notify of finish
-    print(newline + "Generated playlist file: " + output_playlist_file)
-
-    # TODO: Close pipe?
-    # TODO: Finish readme
+    print(newline + "Generated output playlist file:" + "\n" + output_playlist_file)
 
 if __name__ == '__main__':
     main()
