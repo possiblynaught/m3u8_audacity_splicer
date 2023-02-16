@@ -21,8 +21,8 @@ pip install pytaglib
 - Windows: the "modules" folder should be in the same location as audacity.exe
 - Mac: the "modules" folder should be in the "Contents" folder.
 
-4) Next, enable mod-script-pipe by going to the menu in Audactity:  
-Edit -> Preferences -> Modules -> Select 'Ask' in drop down menu for mod-script-pipe
+4) Next, enable the mod-script-pipe by going to the menu in Audactity and selecting:
+Edit -> Preferences -> Modules -> Select 'Ask' in drop-down menu for mod-script-pipe
 
 5) Now, reboot Audacity and select 'Yes' to start the mod-script-pipe. If you had any issues, you can find more info here: https://manual.audacityteam.org/man/scripting.html
 
@@ -44,6 +44,6 @@ This script will prompt user for the following input:
 ## TODO
 
 - [x] Make readme
+- [x] Use python-slugify for file name guard?
+- [x] Finish audacity script
 - [ ] Use venv?
-- [ ] Use python-slugify for file name guard?
-- [ ] Finish audacity script
