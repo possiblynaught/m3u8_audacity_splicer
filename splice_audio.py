@@ -61,219 +61,220 @@ if sys.version_info[0] < 3:
 class Song:
     """Store song data from/for a playlist file"""
 
-    def __init__(self):
-        self.track = None
-        self.artist = None
-        self.runtime = None
-        self.file = None
-        self.number = 0
+    m3u_track_header="#EXTINF:"
 
-    def set_track(self, track):
+    def __init__(self):
+        self.artist = "No artist"
+        self.file = "No file defined for track"
+        self.number = 0
+        self.runtime = 0
+        self.track = "No track name"
+
+    def set_track_name(self, track):
         """Set track name"""
         self.track = str(track)
 
-    def set_artist(self, artist):
+    def set_artist_name(self, artist):
         """Set artist name"""
         self.artist = str(artist)
 
-    def set_runtime(self, seconds):
-        """Set song length (seconds)"""
+    def set_track_runtime(self, seconds):
+        """Set song length in seconds"""
         self.runtime = int(seconds)
 
-    def set_file(self, fil):
+    def set_file_name(self, fil):
         """Set file path"""
         self.file = str(fil)
 
-    def set_number(self, number):
+    def set_track_number(self, number):
         """Set track number"""
         self.number = int(number)
 
-    def get_track(self):
-        """Get track name"""
-        return self.track
+    def __repr__(self):
+        """Print m3u/m3u8 entry lines for the song"""
+        return self.m3u_track_header + str(self.runtime) + "," + self.artist + " - " + \
+            self.track + "\n" + self.file + "\n"
 
-    def get_artist(self):
-        """Get artist name"""
-        return self.artist
-
-    def get_runtime(self):
-        """Get song length (seconds)"""
-        return self.runtime
-
-    def get_file(self):
-        """Get file path"""
-        return self.file
-
-    def get_number(self):
-        """Get track number"""
-        return self.number
-
-def get_filename():
+def select_file():
     """Prompt a user to select a file and test file can be opened, return file path"""
     root = tkinter.Tk()
     root.withdraw()
     input_file = filedialog.askopenfilename()
+    root.destroy()
     try:
-        with open(input_file, encoding='utf-8')  as test:
+        with open(input_file, encoding='utf-8') as temp:
             print("Selected playlist file: " + input_file)
-        test.close()
+            temp.close()
     except IOError:
         sys.exit("Error, unable to open file: " + input_file)
-    root.destroy()
     return input_file
 
-def main():
-    """Start a splice run"""
-
-    # For print use in future
-    newline = "-------------------------------------------------------------------------------\n"
-
-    # Prompt user to select playlist file
-    print(newline + "Please select a playlist file (.m3u/.m3u8):")
-    input_playlist_file = get_filename()
-
-    # Check file type
-    playlist_ext = [".m3u", ".m3u8"]
-    if not input_playlist_file.endswith(tuple(playlist_ext)):
-        sys.exit("Error, playlist doesn't appear to be a M3U8 file: " + input_playlist_file)
-
-    # Check M3U8 header
-    expected_header="#EXTM3U"
-    with open(input_playlist_file, encoding='utf-8') as input_playlist:
-        test_header = input_playlist.readline().strip('\n')
-    if test_header != expected_header:
-        sys.exit("Error, playlist doesn't have a M3U8 header: " + input_playlist_file)
-
-    # Ask user for a save directory
-    print(newline + "Please select the directory where the output folder will be generated:")
+def select_directory():
+    """Prompt a user to select a directory, return dir path"""
     root = tkinter.Tk()
     root.withdraw()
     top_directory = filedialog.askdirectory()
     root.destroy()
+    if not os.path.exists(top_directory):
+        sys.exit("Error, unable to open directory: " + top_directory)
+    return top_directory
 
-    # Create output dir
-    print(top_directory)
-    timestamp = "spliced_" + datetime.now().strftime('%H_%M_%S')
-    output_directory = os.path.join(top_directory, timestamp)
+def create_directory(new_directory):
+    """Creates a directory passed to function"""
     try:
-        os.makedirs(output_directory)
+        os.makedirs(new_directory)
     except OSError:
-        sys.exit("Error, couldn't create output directory: " + output_directory)
-    print("Selected output directory: " + output_directory)
+        sys.exit("Error, couldn't create directory: " + new_directory)
+
+def is_m3u8(playlist_file, good_header):
+    """Tests a file to see if it a valid .m3u/.m3u8 playlist, returns true/false"""
+    # Check M3U8 file type
+    m3u_extensions = [".m3u", ".m3u8"]
+    if not playlist_file.endswith(tuple(m3u_extensions)):
+        sys.exit("Error, playlist doesn't appear to be a M3U8 file: " + playlist_file)
+    # Check M3U8 header
+    with open(playlist_file, encoding='utf-8') as test_playlist:
+        test_header = test_playlist.readline().strip('\n')
+    if test_header != good_header:
+        sys.exit("Error, playlist doesn't have a M3U8 header: " + playlist_file)
+
+def get_string_runtime(seconds):
+    """Return runtime passed in seconds as a minutes:seconds string such as: 4:03"""
+    run_min = str(int(seconds / 60))
+    run_seconds = int(seconds % 60)
+    if run_seconds < 10:
+        return run_min + ":0" + str(run_seconds)
+    return run_min + ":" + str(run_seconds)
+
+def main():
+    """Start a splice run"""
+
+    # Various string defines
+    line_break = "-------------------------------------------------------------------------------\n"
+    m3u_playlist_header = "#EXTM3U"
+
+    # Prompt user to select playlist file
+    print(line_break + "Please select a playlist file (.m3u/.m3u8):")
+    input_playlist_file = select_file()
+
+    # Ensure user chose a valid playlist
+    if not is_m3u8(input_playlist_file, m3u_playlist_header):
+        sys.exit("Error, playlist doesn't seem to be a valid .m3u/.m3u8 playlist: " + \
+            input_playlist_file)
+
+    # Ask user for a save directory
+    print(line_break + "Please select the directory to save the output folder to:")
+    root_dir = select_directory()
+
+    # Generate a new output directory within the save directory with a timestamp
+    output_directory_name = "audacity_spliced_" + datetime.now().strftime('%H_%M_%S')
+    output_directory = os.path.join(root_dir, output_directory_name)
+    create_directory(output_directory)
 
     # Start pipeclient and import comprehensive audio track
     audacity = pipeclient.PipeClient()
     audacity.write("Close:")
     time.sleep(1)
     audacity.write("ImportAudio:")
-    input(newline + "Please select the audio recording to import, hit Enter once loaded: ")
-    # Loop per line in playlist file
-    track_header="#EXTINF:"
-    songs = []
+    input(line_break + "Please select the audio recording to import, hit Enter once loaded: ")
+
+    # Read the input playlist into a list of Songs
+    input_songs_list = []
+    track_number = 0
     with open(input_playlist_file, encoding='utf-8') as input_playlist:
         line = input_playlist.readline()
-        num = 0
         while line:
-            if line.startswith(track_header):
-                # Create song metadata and get runtime in seconds, track name, artist
-                songs.append(Song())
-                songs[num].set_runtime(re.search(':(.+?),', line).group(1))
-                songs[num].set_artist(re.search(',(.+?) -', line).group(1))
-                songs[num].set_track(re.search('- ([^\n]+)$', line).group(1))
-                songs[num].set_number(num + 1)
-                # Iterate num
-                num += 1
+            temp_song = Song()
+            # If song line, ingest data and append Song to list
+            if line.startswith(temp_song.m3u_track_header):
+                track_number += 1
+                temp_song.set_track_runtime(re.search(':(.+?),', line).group(1))
+                temp_song.set_artist_name(re.search(',(.+?) -', line).group(1))
+                temp_song.set_track_name(re.search('- ([^\n]+)$', line).group(1))
+                temp_song.set_track_number(track_number)
+                input_songs_list.append(temp_song)
+            # Read next line
             line = input_playlist.readline()
 
-    # Prep error list
-    error_list = []
-    # Export songs + playlist data to output dir
-    output_playlist_file = os.path.join(output_directory, "__playlist.m3u8")
-    with open(output_playlist_file, 'w', encoding='utf-8') as output_playlist:
-        # Create header
-        output_playlist.write(expected_header + "\n")
-        # Read songs and edit Audacity waveforms
-        for song in songs:
-            # Set song length and zoom in on end
-            audacity.write("Select: Start=0 End=" + str(song.get_runtime()))
-            audacity.write("ZoomSel:")
-            # Zoom in
-            for z in range(7):
-                audacity.write("ZoomIn:")
-            # Focus on end of selection
-            audacity.write("SkipSelEnd:")
-            # Get expected song length in min and seconds
-            len_min = str(int(song.get_runtime() / 60))
-            len_sec = int(song.get_runtime() % 60)
-            if len_sec < 10:
-                len_sec = "0" + str(len_sec)
-            else:
-                len_sec = str(len_sec)
-            # Prompt user to verify end point
-            choice = input(newline + str(song.get_number()) + " - Click the end of the song (" + \
-                len_min + ":" + len_sec + "), press Enter when done or 'q' to quit: ")
+    # Export the songs in the list via Audacity hooks and add to new playlist
+    print(line_break + "Starting playlist track export process...")
+    # Read songs and edit Audacity waveforms
+    for song in input_songs_list:
+        # Set song length and zoom in on end
+        audacity.write("Select: Start=0 End=" + str(song.runtime))
+        audacity.write("ZoomSel:")
+        # Zoom in
+        for zoom in range(7):
+            audacity.write("ZoomIn:")
+        # Focus on end of selection
+        audacity.write("SkipSelEnd:")
+        # Prompt user to verify end point
+        choice = input(line_break + str(song.number) + " - Click the end of the song (~" + \
+            get_string_runtime(song.runtime) + \
+                ") waveform, press Enter when done or 'q' to quit: ")
+        # Test user response
+        if choice == 'q':
             # Quit if 'q' passed
-            if choice == 'q':
-                break
-            audacity.write("SelPrevClipBoundaryToCursor:")
-            audacity.write("Split:")
-            # Create an output filename and export the track, strip illegal chars
-            wavname = slugify(song.get_track())
-            wavname = wavname + ".wav"
-            # Guard against newline \n in filenames on Windows
-            if wavname[0] == "n":
-                wavname = "_" + wavname
-            # Replace spaces with underscores
-            song.set_file(os.path.join(output_directory, wavname).replace(" ", "_"))
-            # Export file and trim remaining
-            audacity.write("Export2: Filename=" + song.get_file())
-            audacity.write("Delete:")
-            audacity.write("Align_StartToZero:")
+            break
+        # Select the edited song and trim it
+        audacity.write("SelPrevClipBoundaryToCursor:")
+        audacity.write("Split:")
+        # Create an output song filename, strip illegal chars
+        temp_wav_name = slugify(song.track) + ".wav"
+        # Guard against newlines '\n' in filenames on Windows
+        if temp_wav_name[0] == "n":
+            temp_wav_name = "_" + temp_wav_name
+        # Replace spaces with underscores and save the new name
+        song.set_file_name(os.path.join(output_directory, temp_wav_name).replace(" ", "_"))
+        # Export wav file and trim remaining
+        audacity.write("Export2: Filename=" + song.file)
+        audacity.write("Delete:")
+        audacity.write("Align_StartToZero:")
 
-        # Set .wav file metadata or add to error handler
-        print(newline + "Writing .wav files with metadata")
-        for song in songs:
-            # Check for output file
-            if song.get_file() is None:
-                error_list.append(song)
-            elif os.path.exists(song.get_file()):
-                # Export song metadata to playlist file
-                output_playlist.write(track_header + str(song.get_runtime()) + "," + \
-                    song.get_artist() + " - " + song.get_track() + "\n" + song.get_file() + "\n")
+    # Check exported songs are present and set .wav file metadata + add to new playlist
+    print(line_break + "Setting exported track metadata...")
+    # Quick pause in case of ongoing track export
+    time.sleep(2)
+    # Prepare an error list for missing tracks
+    error_songs_list = []
+    # Open output playlist
+    output_playlist_name = "__" + output_directory_name + "__playlist.m3u8"
+    output_playlist_file = os.path.join(output_directory, output_playlist_name)
+    with open(output_playlist_file, 'w', encoding='utf-8') as output_playlist:
+        # Create playlist header
+        output_playlist.write(m3u_playlist_header + "\n")
+        for song in input_songs_list:
+            # Test for .wav file
+            if os.path.exists(song.file):
+                # If file good, export track to playlist
+                output_playlist.write(repr(song))
                 # Set .wav file metadata
-                wav = taglib.File(song.get_file())
-                wav.tags["ARTIST"] = [song.get_artist()]
-                wav.tags["TITLE"] = [song.get_track()]
-                wav.tags["TRACKNUMBER"] = [str(song.get_number())]
-                wav.save()
+                temp_wav = taglib.File(song.file)
+                temp_wav.tags["ARTIST"] = [song.artist]
+                temp_wav.tags["TITLE"] = [song.track]
+                temp_wav.save()
             else:
-                error_list.append(song)
+                error_songs_list.append(song)
 
-    # Prep error playlist
-    error_playlist_file = os.path.join(output_directory, "__error_on_export_songs.m3u8")
-    if error_list:
+    # Check for any errors and notify user + create playlist of errored tracks
+    error_playlist_file = os.path.join(output_directory, "__export_error_tracks.m3u8")
+    if error_songs_list:
         with open(error_playlist_file, 'w', encoding='utf-8') as error_playlist:
-            # Create header
-            error_playlist.write(expected_header + "\n")
-            print(newline)
-            for song in error_list:
+            # Create playlist header
+            error_playlist.write(m3u_playlist_header + "\n")
+            print(line_break)
+            for song in error_songs_list:
                 # If missing file, warn of error and add to error file
-                print("Error exporting track " + str(song.get_number()) + \
-                    ": " + song.get_track())
-                if song.get_file() is None:
-                    error_playlist.write(track_header + str(song.get_runtime()) + "," + \
-                        song.get_artist() + " - " + song.get_track() + "\n" + \
-                        "NO FILENAME CREATED" + "\n")
-                else:
-                    error_playlist.write(track_header + str(song.get_runtime()) + "," + \
-                        song.get_artist() + " - " + song.get_track() + "\n" + \
-                        song.get_file() + "\n")
+                print("Error exporting track " + str(song.number) + ": " + song.track)
+                # Write track to error playlist
+                error_playlist.write(repr(song))
             # Notify of error
-            print(newline + "All failed track exports have been saved to playlist file: " \
-                + "\n" + error_playlist_file)
+            print(line_break + "All failed track exports have been saved to error playlist file:")
+            print(error_playlist_file)
             
     # Notify of finish
-    print(newline + "Generated output playlist file:" + "\n" + output_playlist_file)
+    print(line_break + "Generated output playlist file:")
+    print(output_playlist_file)
 
 if __name__ == '__main__':
     main()
