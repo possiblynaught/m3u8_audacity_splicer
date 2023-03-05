@@ -131,12 +131,17 @@ def is_m3u8(playlist_file, good_header):
     # Check M3U8 file type
     m3u_extensions = [".m3u", ".m3u8"]
     if not playlist_file.endswith(tuple(m3u_extensions)):
-        sys.exit("Error, playlist doesn't appear to be a M3U8 file: " + playlist_file)
+        print("Error, playlist has wrong file extension: " + playlist_file)
+        return False
     # Check M3U8 header
     with open(playlist_file, encoding='utf-8') as test_playlist:
         test_header = test_playlist.readline().strip('\n')
-    if test_header != good_header:
-        sys.exit("Error, playlist doesn't have a M3U8 header: " + playlist_file)
+        if test_header == good_header:
+            return True
+        else:
+            print("Error, playlist file doesn't have a M3U8 header (" + good_header + \
+                "): " + playlist_file)
+    return False
 
 def get_string_runtime(seconds):
     """Return runtime passed in seconds as a minutes:seconds string such as: 4:03"""
@@ -149,15 +154,14 @@ def get_string_runtime(seconds):
 def main():
     """Start a splice run"""
 
-    # Various string defines
     line_break = "-------------------------------------------------------------------------------\n"
-    m3u_playlist_header = "#EXTM3U"
 
     # Prompt user to select playlist file
     print(line_break + "Please select a playlist file (.m3u/.m3u8):")
     input_playlist_file = select_file()
 
     # Ensure user chose a valid playlist
+    m3u_playlist_header = "#EXTM3U"
     if not is_m3u8(input_playlist_file, m3u_playlist_header):
         sys.exit("Error, playlist doesn't seem to be a valid .m3u/.m3u8 playlist: " + \
             input_playlist_file)
