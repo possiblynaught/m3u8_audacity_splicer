@@ -232,6 +232,7 @@ def main():
         song.set_file_name(os.path.join(output_directory, temp_wav_name))
         # Export wav file and trim remaining
         audacity.write("Export2: Filename=" + song.file + " NumChannels=2")
+        time.sleep(1)
         audacity.write("Delete:")
         audacity.write("Align_StartToZero:")
 
