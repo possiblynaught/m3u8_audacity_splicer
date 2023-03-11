@@ -224,14 +224,14 @@ def main():
         audacity.write("SelPrevClipBoundaryToCursor:")
         audacity.write("Split:")
         # Create an output song filename, strip illegal chars
-        temp_wav_name = slugify(song.track) + ".wav"
+        temp_wav_name = slugify(song.track).replace(" ", "_") + ".wav"
         # Guard against newlines '\n' in filenames on Windows
         if temp_wav_name[0] == "n":
             temp_wav_name = "_" + temp_wav_name
         # Replace spaces with underscores and save the new name
-        song.set_file_name(os.path.join(output_directory, temp_wav_name).replace(" ", "_"))
+        song.set_file_name(os.path.join(output_directory, temp_wav_name))
         # Export wav file and trim remaining
-        audacity.write("Export2: Filename=" + song.file)
+        audacity.write("Export2: Filename=" + song.file + " NumChannels=2")
         audacity.write("Delete:")
         audacity.write("Align_StartToZero:")
 
