@@ -43,7 +43,6 @@ import os
 import re
 import sys
 import time
-from datetime import datetime
 # Import tkinter for file selection
 import tkinter
 from tkinter import filedialog
@@ -58,11 +57,12 @@ import pipeclient
 if sys.version_info[0] < 3:
     sys.exit("Error, Python 3 required")
 
+# Global vars
+LINE_BREAK = "-----------------------------------------------------------\n"
+M3U_TRACK_HEADER="#EXTINF:"
+
 class Song:
     """Store song data from/for a playlist file"""
-
-    m3u_track_header="#EXTINF:"
-
     def __init__(self):
         self.artist = "No artist"
         self.file = "No file defined for track"
@@ -92,7 +92,7 @@ class Song:
 
     def __repr__(self):
         """Print m3u/m3u8 entry lines for the song"""
-        return self.m3u_track_header + str(self.runtime) + "," + self.artist + " - " + \
+        return M3U_TRACK_HEADER + str(self.runtime) + "," + self.artist + " - " + \
             self.track + "\n" + self.file + "\n"
 
 def select_file():
@@ -124,7 +124,8 @@ def create_directory(new_directory):
     try:
         os.makedirs(new_directory)
     except OSError:
-        sys.exit("Error, couldn't create directory: " + new_directory)
+        sys.exit("Error, couldn't create directory, make sure it doesn't already exist: " + \
+            new_directory)
 
 def is_m3u8(playlist_file, good_header):
     """Tests a file to see if it a valid .m3u/.m3u8 playlist, returns true/false"""
@@ -138,9 +139,8 @@ def is_m3u8(playlist_file, good_header):
         test_header = test_playlist.readline().strip('\n')
         if test_header == good_header:
             return True
-        else:
-            print("Error, playlist file doesn't have a M3U8 header (" + good_header + \
-                "): " + playlist_file)
+        print("Error, playlist file doesn't have a M3U8 header (" + good_header + \
+            "): " + playlist_file)
     return False
 
 def get_string_runtime(seconds):
@@ -151,13 +151,37 @@ def get_string_runtime(seconds):
         return run_min + ":0" + str(run_seconds)
     return run_min + ":" + str(run_seconds)
 
+def zoom_track_end(audacity, song):
+    """Reset the view and zoom in on the end of the loaded track"""
+    # Set song length and zoom in on end
+    audacity.write("Select: Start=0 End=" + str(song.runtime))
+    audacity.write("ZoomSel:")
+    # Zoom in
+    for zoom in range(7):
+        audacity.write("ZoomIn:")
+    # Focus on end of selection
+    audacity.write("SkipSelEnd:")
+
+def prompt_track_action(audacity, song, total_tracks):
+    """Prepare a track and prompt the user for input on what to do"""
+    # Zoom on end of track
+    zoom_track_end(audacity, song)
+    # Prompt user to verify end point
+    print(LINE_BREAK + str(song.number + 1) + "/" + str(total_tracks) + ": " + \
+        "Select/modify the end of the track (~" + get_string_runtime(song.runtime) + "):")
+    print("Artist:" + song.artist)
+    print("Track:" + song.track)
+    choice = input("Press 'r' to reload the end of the track, 'q' to quit, or Enter to continue: ")
+    if choice == 'r':
+        # Reset zoom to end of the track and re-prompt
+        return prompt_track_action(audacity, song, total_tracks)
+    return choice
+
 def main():
     """Start a splice run"""
 
-    line_break = "-------------------------------------------------------------------------------\n"
-
     # Prompt user to select playlist file
-    print(line_break + "Please select a playlist file (.m3u/.m3u8):")
+    print(LINE_BREAK + "Please select a playlist file (.m3u/.m3u8):")
     input_playlist_file = select_file()
 
     # Ensure user chose a valid playlist
@@ -167,20 +191,24 @@ def main():
             input_playlist_file)
 
     # Ask user for a save directory
-    print(line_break + "Please select the directory to save the output folder to:")
+    print(LINE_BREAK + "Please select the directory to save the output folder to:")
     root_dir = select_directory()
 
+    # Ask user for a folder name
+    output_directory_name= input(LINE_BREAK + "Please name the output folder: ")
     # Generate a new output directory within the save directory with a timestamp
-    output_directory_name = "audacity_spliced_" + datetime.now().strftime('%H_%M_%S')
     output_directory = os.path.join(root_dir, output_directory_name)
     create_directory(output_directory)
+
+    # Notify user
+    print(LINE_BREAK + "Saving to output dir: " + output_directory)
 
     # Start pipeclient and import comprehensive audio track
     audacity = pipeclient.PipeClient()
     audacity.write("Close:")
     time.sleep(1)
     audacity.write("ImportAudio:")
-    input(line_break + "Please select the audio recording to import, hit Enter once loaded: ")
+    input(LINE_BREAK + "Please select the audio recording to import, hit Enter once loaded: ")
 
     # Read the input playlist into a list of Songs
     input_songs_list = []
@@ -190,7 +218,7 @@ def main():
         while line:
             temp_song = Song()
             # If song line, ingest data and append Song to list
-            if line.startswith(temp_song.m3u_track_header):
+            if line.startswith(M3U_TRACK_HEADER):
                 track_number += 1
                 temp_song.set_track_runtime(re.search(':(.+?),', line).group(1))
                 temp_song.set_artist_name(re.search(',(.+?) -', line).group(1))
@@ -201,25 +229,17 @@ def main():
             line = input_playlist.readline()
 
     # Export the songs in the list via Audacity hooks and add to new playlist
-    print(line_break + "Starting playlist track export process...")
+    print(LINE_BREAK + "Starting playlist track export process...")
     # Read songs and edit Audacity waveforms
     for song in input_songs_list:
-        # Set song length and zoom in on end
-        audacity.write("Select: Start=0 End=" + str(song.runtime))
-        audacity.write("ZoomSel:")
-        # Zoom in
-        for zoom in range(7):
-            audacity.write("ZoomIn:")
-        # Focus on end of selection
-        audacity.write("SkipSelEnd:")
-        # Prompt user to verify end point
-        choice = input(line_break + str(song.number) + " - Click the end of the song (~" + \
-            get_string_runtime(song.runtime) + \
-                ") waveform, press Enter when done or 'q' to quit: ")
+        # Prompt user
+        choice = prompt_track_action(audacity, song, track_number)
         # Test user response
         if choice == 'q':
             # Quit if 'q' passed
             break
+        # Stop any active playback
+        audacity.write("Stop:")
         # Select the edited song and trim it
         audacity.write("SelPrevClipBoundaryToCursor:")
         audacity.write("Split:")
@@ -237,13 +257,13 @@ def main():
         audacity.write("Align_StartToZero:")
 
     # Check exported songs are present and set .wav file metadata + add to new playlist
-    print(line_break + "Setting exported track metadata...")
+    print(LINE_BREAK + "Setting exported track metadata...")
     # Quick pause in case of ongoing track export
     time.sleep(2)
     # Prepare an error list for missing tracks
     error_songs_list = []
     # Open output playlist
-    output_playlist_name = "__" + output_directory_name + "__playlist.m3u8"
+    output_playlist_name = output_directory_name + "_playlist.m3u8"
     output_playlist_file = os.path.join(output_directory, output_playlist_name)
     with open(output_playlist_file, 'w', encoding='utf-8') as output_playlist:
         # Create playlist header
@@ -262,23 +282,23 @@ def main():
                 error_songs_list.append(song)
 
     # Check for any errors and notify user + create playlist of errored tracks
-    error_playlist_file = os.path.join(output_directory, "__export_error_tracks.m3u8")
+    error_playlist_file = os.path.join(output_directory, "error_tracks.m3u8")
     if error_songs_list:
         with open(error_playlist_file, 'w', encoding='utf-8') as error_playlist:
             # Create playlist header
             error_playlist.write(m3u_playlist_header + "\n")
-            print(line_break)
+            print(LINE_BREAK)
             for song in error_songs_list:
                 # If missing file, warn of error and add to error file
                 print("Error exporting track " + str(song.number) + ": " + song.track)
                 # Write track to error playlist
                 error_playlist.write(repr(song))
             # Notify of error
-            print(line_break + "All failed track exports have been saved to error playlist file:")
+            print(LINE_BREAK + "All failed track exports have been saved to error playlist file:")
             print(error_playlist_file)
-            
+
     # Notify of finish
-    print(line_break + "Generated output playlist file:")
+    print(LINE_BREAK + "Generated output playlist file:")
     print(output_playlist_file)
 
 if __name__ == '__main__':
