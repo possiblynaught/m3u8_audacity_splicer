@@ -167,10 +167,10 @@ def prompt_track_action(audacity, song, total_tracks):
     # Zoom on end of track
     zoom_track_end(audacity, song)
     # Prompt user to verify end point
-    print(LINE_BREAK + str(song.number + 1) + "/" + str(total_tracks) + ": " + \
-        "Select/modify the end of the track (~" + get_string_runtime(song.runtime) + "):")
-    print("Artist:" + song.artist)
-    print("Track:" + song.track)
+    print(LINE_BREAK + str(song.number) + "/" + str(total_tracks) + ": " + \
+        "Select/modify the end of the track (~" + get_string_runtime(song.runtime) + "): ")
+    print("Artist: " + song.artist)
+    print("Track: " + song.track)
     choice = input("Press 'r' to reload the end of the track, 'q' to quit, or Enter to continue: ")
     if choice == 'r':
         # Reset zoom to end of the track and re-prompt
